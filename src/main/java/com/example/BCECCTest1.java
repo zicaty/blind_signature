@@ -12,18 +12,19 @@ import java.math.BigInteger;
 import java.security.*;
 import java.util.Random;
 
-public class BCECCTest {
+public class BCECCTest1 {
     public static void main(String[] args)
             throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
         // 下面获取盲签名过程的所有所需参数
         Security.addProvider(new BouncyCastleProvider());
+        SecureRandom random = new SecureRandom();
         // Use SM2 curve parameters from Bouncy Castle
         X9ECParameters sm2Parameters = ECUtil.getNamedCurveByName("sm2p256v1");
         // 基点参数G
-        ECPoint genPoint = sm2Parameters.getG();
+        ECPoint G = sm2Parameters.getG();
         // 模数n
         BigInteger n = sm2Parameters.getN();
-        ECParameterSpec ecParameterSpec = new ECParameterSpec(sm2Parameters.getCurve(), genPoint, sm2Parameters.getN());
+        ECParameterSpec ecParameterSpec = new ECParameterSpec(sm2Parameters.getCurve(), G, sm2Parameters.getN());
         // 生成公钥和私钥
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC", "BC");
         keyPairGenerator.initialize(ecParameterSpec);
@@ -34,40 +35,37 @@ public class BCECCTest {
         ECPoint pkPoint = ((ECPublicKey) pk).getQ();
         // 私钥参数d
         BigInteger d = ((ECPrivateKey) sk).getD();
-        SecureRandom random = new SecureRandom();
-        // 签名方随机数k
-        BigInteger k = getNextRandomBigInteger(random, 32);
-        // 本地方随机数alpha、beta（下称a、b）
+
+        // 用户
+        // （1）本地方随机数alpha（下称a）
         BigInteger alpha = getNextRandomBigInteger(random, 32);
-        BigInteger beta = getNextRandomBigInteger(random, 32);
 
         // 测试用的待签名数据
         byte[] data = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
         // 下面开始正式计算过程
         // (1)签名者计算R=kG
-        ECPoint rPoint = genPoint.multiply(k);
-        // (2-1)用户计算A=R+aG+bQ
-        ECPoint aG = genPoint.multiply(alpha);
-        ECPoint bQ = pkPoint.multiply(beta);
-        ECPoint aPoint = rPoint.add(aG).add(bQ);
+        // 签名方随机数k
+        BigInteger k = getNextRandomBigInteger(random, 32);
+        ECPoint rPoint = G.multiply(k);
+        // (2-1)用户计算A=R+aG
+        ECPoint aG = G.multiply(alpha);
+        ECPoint aPoint = rPoint.add(aG);
         // (2-2)计算t=Rx(A) mod n
-        BigInteger t = getX(aPoint).mod(n);
-        // (2-3)计算c=H(m||t)
-        byte[] tByte = t.toByteArray();
+        BigInteger x1 = getX(aPoint).mod(n);
+        // (2-3)计算c=H(m||x1)
+        byte[] tByte = x1.toByteArray();
         byte[] cByte = hashCombine(data, tByte);
         BigInteger c = new BigInteger(cByte);
-        // (2-4)计算c'=c-beta
-        BigInteger cPrime = c.add(beta.negate());
-        // (3)签名者计算s'=k-c'd
-        BigInteger cPrimeD = cPrime.multiply(d);
-        BigInteger sPrime = k.add(cPrimeD.negate());
+        // (3)签名者计算s'=k-cd
+        BigInteger cD = c.multiply(d);
+        BigInteger sPrime = k.add(cD.negate());
         // (4)用户计算s=s'+alpha，s即为对原数据的盲签名
         BigInteger s = sPrime.add(alpha);
 
         // 签名验证：计算c==H(m||(Rx(cQ+sG) mod n))
         ECPoint cQ = pkPoint.multiply(c);
-        ECPoint sG = genPoint.multiply(s);
+        ECPoint sG = G.multiply(s);
         ECPoint cQsG = cQ.add(sG);
         BigInteger cQsGx = getX(cQsG).mod(n);
         byte[] cQsGxByte = cQsGx.toByteArray();
@@ -92,5 +90,4 @@ public class BCECCTest {
     public static BigInteger getX(ECPoint point) {
         return point.normalize().getXCoord().toBigInteger();
     }
-
 }
