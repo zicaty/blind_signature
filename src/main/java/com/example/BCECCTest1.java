@@ -1,3 +1,5 @@
+// 在https://github.com/djjsdtc/ecc_blind_signature.git基础上修改，让AI只保留alpha，去掉beta。
+// 验签成功
 package com.example;
 
 import org.bouncycastle.asn1.x9.X9ECParameters;

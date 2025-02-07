@@ -1,3 +1,5 @@
+// 来自https://github.com/djjsdtc/ecc_blind_signature.git
+// 验签成功
 package com.example;
 
 import org.bouncycastle.asn1.x9.X9ECParameters;
