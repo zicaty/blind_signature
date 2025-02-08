@@ -19,7 +19,7 @@ public class SM2BlindSignature {
             throws NoSuchProviderException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
         Security.addProvider(new BouncyCastleProvider());
         // X9ECParameters eccParameters = ECUtil.getNamedCurveByName("sm2p256v1");
-        X9ECParameters eccParameters = ECUtil.getNamedCurveByName("nistp256");
+        X9ECParameters eccParameters = ECUtil.getNamedCurveByName("secp256k1");
         G = eccParameters.getG();
         n = eccParameters.getN();
         ECParameterSpec ecParameterSpec = new ECParameterSpec(eccParameters.getCurve(), G, eccParameters.getN());
@@ -53,7 +53,7 @@ public class SM2BlindSignature {
         String message = "Hello, this is a secret message.";
         byte[] messageBytes = message.getBytes();
         // Hash the message
-        MessageDigest digest = MessageDigest.getInstance("SM3", "BC");
+        MessageDigest digest = MessageDigest.getInstance("SHA256", "BC");
         byte[] hash = digest.digest(messageBytes);
         BigInteger m = new BigInteger(1, hash);
 
